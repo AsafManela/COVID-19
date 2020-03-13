@@ -110,6 +110,9 @@ plotcountries = ["US", "Israel"]
 function plotcountrystatus(cdr, countries, status::Symbol=:Confirmed)
     agg = aggcdr(cdr; byvalues=plotcountries)
 
+    # fix date bug in tooltips
+    agg.Date .+= Dates.Day(1)
+    
     agg |> @vlplot(x=:Date, y=status, color=Symbol("Country/Region"), width=800, height=600,
         mark={:line, point={filled=false}},
         config={
@@ -124,6 +127,37 @@ end
 p = plotcountrystatus(cdr, plotcountries, :Confirmed)
 
 save(joinpath(figdir, "agg.select.countries.pdf"), p)
+
+# agg = aggcdr(cdr; byvalues=plotcountries)
+
+function plotcountrystatuschange(cdr, countries, status::Symbol=:Confirmed)
+    agg = aggcdr(cdr; byvalues=plotcountries)
+
+    sort!(agg, [Symbol("Country/Region"), :Date])
+    dagg = by(agg, Symbol("Country/Region")) do df
+        (
+            Country=df[!,Symbol("Country/Region")], 
+            Date=df.Date,
+            newstatus = vcat([missing], diff(df[!,status]))
+        )
+    end
+
+    # fix date bug in tooltips
+    dagg.Date .+= Dates.Day(1)
+
+    dagg |> @vlplot(x=:Date, y=:newstatus, color=Symbol("Country/Region"), width=800, height=600,
+        mark={:line, point={filled=false}},
+        ylabel="New $status",
+        config={
+            background="#333",
+            title={color="#fff"},
+            style={"guide-label"={fill="#fff"}, "guide-title"={fill="#fff"}},
+            axis={domainColor="#fff", gridColor="#888", tickColor="#fff"}
+        }
+    )
+end
+
+p = plotcountrystatuschange(cdr, plotcountries, :Confirmed)
 
 aggstacked(cdr, country) = stack(aggcdr(cdr; byvalues=[country]), Not([:Date, Symbol("Country/Region")]), variable_name=:Status, value_name=:People)
 
