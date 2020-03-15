@@ -44,6 +44,9 @@ function ts(status::Symbol)
     df
 end
 
+cleanint(x::Missing) = missing
+cleanint(x) = Int(clamp(x, 0, Inf))
+
 function ts()
     confirmed = ts(:Confirmed)
     deaths = ts(:Deaths)
@@ -76,9 +79,9 @@ function ts()
 
     # create other countries totals as residual
     usother = join(usstates2, usstates3, on=[:Date, :State])
-    usother.Confirmed = Int.(clamp.(usother.Confirmed .- usother.Confirmed_Dis, 0, Inf))
-    usother.Deaths = Int.(clamp.(usother.Deaths .- usother.Deaths_Dis, 0, Inf))
-    usother.Recovered = Int.(clamp.(usother.Recovered .- usother.Recovered_Dis, 0, Inf))
+    usother.Confirmed = cleanint.(usother.Confirmed .- usother.Confirmed_Dis)
+    usother.Deaths = cleanint.(usother.Deaths .- usother.Deaths_Dis)
+    usother.Recovered = cleanint.(usother.Recovered .- usother.Recovered_Dis)
     usother.Total = falses(length(usother.Recovered))
     usother[!,Symbol("Province/State")] .= "Other"
 
