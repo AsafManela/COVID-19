@@ -98,24 +98,22 @@ cdr = ts()
 function aggcdr(cdr; byvar=Symbol("Country/Region"), byvalues=["US"])
     ix = [!ismissing(x) && (x in byvalues) for x in cdr[!, byvar] ];
 
-    by(cdr[ix,:], [:Date, byvar],
+    agg = by(cdr[ix,:], [:Date, byvar],
         Confirmed = :Confirmed => sum,
         Deaths = :Deaths => sum,
         Recovered = :Recovered => sum
     ) 
-end
 
-# unique(cdr[Symbol("Country/Region")])
-# plotcountries = ["Mainland China", "Italy", "Japan", "Republic of Korea", "Germany", "US", "UK", "Israel"]
-plotcountries = ["Italy", "Japan", "South Korea", "Germany", "US", "UK", "Israel"]
-plotcountries = ["US", "Israel"]
+
+    # fix date bug in tooltips
+    agg.Date .+= Dates.Day(1)
+
+    agg
+end
 
 function plotcountrystatus(cdr, countries, status::Symbol=:Confirmed)
     agg = aggcdr(cdr; byvalues=plotcountries)
 
-    # fix date bug in tooltips
-    agg.Date .+= Dates.Day(1)
-    
     agg |> @vlplot(x=:Date, y=status, color=Symbol("Country/Region"), width=800, height=600,
         mark={:line, point={filled=false}},
         config={
@@ -126,10 +124,6 @@ function plotcountrystatus(cdr, countries, status::Symbol=:Confirmed)
         }
     )
 end
-
-p = plotcountrystatus(cdr, plotcountries, :Confirmed)
-
-save(joinpath(figdir, "agg.select.countries.pdf"), p)
 
 # agg = aggcdr(cdr; byvalues=plotcountries)
 
@@ -145,9 +139,6 @@ function plotcountrystatuschange(cdr, countries, status::Symbol=:Confirmed)
         )
     end
 
-    # fix date bug in tooltips
-    dagg.Date .+= Dates.Day(1)
-
     dagg |> @vlplot(x=:Date, y=:newstatus, color=Symbol("Country/Region"), width=800, height=600,
         mark={:line, point={filled=false}},
         ylabel="New $status",
@@ -160,7 +151,16 @@ function plotcountrystatuschange(cdr, countries, status::Symbol=:Confirmed)
     )
 end
 
+# unique(cdr[Symbol("Country/Region")])
+plotcountries = ["Italy", "Japan", "Korea, South", "Germany", "US", "UK", "Israel"]
+p = plotcountrystatus(cdr, plotcountries, :Confirmed)
 p = plotcountrystatuschange(cdr, plotcountries, :Confirmed)
+
+plotcountries = ["US", "Israel"]
+p = plotcountrystatus(cdr, plotcountries, :Confirmed)
+p = plotcountrystatuschange(cdr, plotcountries, :Confirmed)
+
+# save(joinpath(figdir, "agg.select.countries.pdf"), p)
 
 aggstacked(cdr, country) = stack(aggcdr(cdr; byvalues=[country]), Not([:Date, Symbol("Country/Region")]), variable_name=:Status, value_name=:People)
 
@@ -178,5 +178,7 @@ function plotcountry(cdr, country)
         )
 end
 
-plotcountry(cdr, "India")
 plotcountry(cdr, "Israel")
+plotcountry(cdr, "US")
+plotcountry(cdr, "Italy")
+plotcountry(cdr, "Korea, South")
